@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ExpensesAppCpp.MainPage">
+
+    <ScrollView>
+        <VerticalStackLayout
+            Padding="30,0"
+            Spacing="25">
+            <Image
+                Source="receipt.svg"
+                HeightRequest="300"
+                Aspect="AspectFit"
+                SemanticProperties.Description="receipt" />
+
+            <Label
+                Text="Klicken um zu Scannen!"
+                Style="{StaticResource Headline}"
+                SemanticProperties.HeadingLevel="Level1" />
+
+            <Label
+                Text="persönlicher Essens Ausgabentracker"
+                Style="{StaticResource SubHeadline}"
+                SemanticProperties.HeadingLevel="Level2"
+                SemanticProperties.Description="Untertitel" />
+
+            <Button
+                x:Name="CameraBtn"
+                Text="Scan Receipt"
+                TextColor="{StaticResource Secondary}"
+                BackgroundColor= "{StaticResource Primary}"
+                SemanticProperties.Hint="Opens Camera"
+                Clicked="OnClicked"
+                HorizontalOptions="Fill" />
+            <Button
+                x:Name="ExpensesBtn"
+                Text="Expenses"
+                TextColor="{StaticResource Secondary}"
+                BackgroundColor= "{StaticResource Primary}"
+                SemanticProperties.Hint="Opens Expenses"
+                Clicked="OnExpensesClicked"
+                HorizontalOptions="Fill" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
