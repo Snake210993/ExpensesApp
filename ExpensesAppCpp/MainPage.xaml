@@ -33,13 +33,14 @@
                 Clicked="OnClicked"
                 HorizontalOptions="Fill" />
             <Button
-                x:Name="ExpensesBtn"
-                Text="Expenses"
+                x:Name="UploadBtn"
+                Text="Quittung hochladen"
                 TextColor="{StaticResource Secondary}"
                 BackgroundColor= "{StaticResource Primary}"
-                SemanticProperties.Hint="Opens Expenses"
-                Clicked="OnExpensesClicked"
+                SemanticProperties.Hint="Upload image"
+                Clicked="OnUploadClicked"
                 HorizontalOptions="Fill" />
+
         </VerticalStackLayout>
     </ScrollView>
 

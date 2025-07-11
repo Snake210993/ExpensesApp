@@ -73,6 +73,17 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
+		<PackageReference Include="Tesseract" Version="5.2.0" />
+		<PackageReference Include="TesseractOcrMaui" Version="1.2.0" />
 	</ItemGroup>
 
-</Project>
+  <ItemGroup>
+    <MauiAsset  Include="tessdata\eng.traineddata">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset  Include="tessdata\deu.traineddata">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+ </ItemGroup>
+
+ </Project>

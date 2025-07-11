@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using TesseractOcrMaui;
 
 namespace ExpensesAppCpp
 {
@@ -18,6 +19,13 @@ namespace ExpensesAppCpp
 #if DEBUG
     		builder.Logging.AddDebug();
 #endif
+
+            // Register Tesseract and load eng.traineddata
+            builder.Services.AddTesseractOcr(files =>
+            {
+                files.AddFile("eng.traineddata");
+                files.AddFile("deu.traineddata");
+            });
 
             return builder.Build();
         }
