@@ -2,7 +2,6 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>net9.0-android;net9.0-ios;net9.0-maccatalyst</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net9.0-windows10.0.19041.0</TargetFrameworks>
 		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
 		<!-- <TargetFrameworks>$(TargetFrameworks);net9.0-tizen</TargetFrameworks> -->
 
@@ -33,17 +32,45 @@
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
 
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
-		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
+	  <NoWarn>1701;1702;MVVMTK0045</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-ios|AnyCPU'">
+	  <NoWarn>1701;1702;MVVMTK0045</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-maccatalyst|AnyCPU'">
+	  <NoWarn>1701;1702;MVVMTK0045</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows10.0.19041.0|AnyCPU'">
+	  <NoWarn>1701;1702;MVVMTK0045</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|AnyCPU'">
+	  <NoWarn>1701;1702;MVVMTK0045</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-ios|AnyCPU'">
+	  <NoWarn>1701;1702;MVVMTK0045</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-maccatalyst|AnyCPU'">
+	  <NoWarn>1701;1702;MVVMTK0045</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-windows10.0.19041.0|AnyCPU'">
+	  <NoWarn>1701;1702;MVVMTK0045</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicongreen.svg" ForegroundFile="Resources\AppIcon\carticon.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\AppIcon\appicongreen.svg" ForegroundFile="Resources\AppIcon\AppIconExpenses.svg" Color="#512BD4" />
 
 		<!-- Splash Screen -->
 		<MauiSplashScreen Include="Resources\Splash\sirsnakespear.svg" Color="#3e9c35" BaseSize="256,256" />
@@ -60,30 +87,60 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <MauiXaml Remove="ExpenditureCollection.xaml" />
+	  <AndroidResource Remove="tessdata\**" />
+	  <Compile Remove="tessdata\**" />
+	  <EmbeddedResource Remove="tessdata\**" />
+	  <MauiCss Remove="tessdata\**" />
+	  <MauiXaml Remove="tessdata\**" />
+	  <None Remove="tessdata\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <MauiXaml Remove="Resources\ExpenditureCollection.xaml" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <EmbeddedResource Include="ExpenditureCollection.xaml">
-	    <Generator>MSBuild:UpdateDesignTimeXaml</Generator>
-	  </EmbeddedResource>
+		<PackageReference Include="CommunityToolkit.Maui" Version="12.1.0" />
+		<PackageReference Include="CommunityToolkit.Maui.Core" Version="12.1.0" />
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.90" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.7" />
+		<PackageReference Include="SkiaSharp" Version="3.119.0" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
-		<PackageReference Include="Tesseract" Version="5.2.0" />
-		<PackageReference Include="TesseractOcrMaui" Version="1.2.0" />
-	</ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
+    <PackageReference Include="Xamarin.Google.MLKit.Common">
+      <Version>118.11.0.4</Version>
+    </PackageReference>
+    <PackageReference Include="Xamarin.Google.MLKit.Vision.Common">
+      <Version>117.3.0.15</Version>
+    </PackageReference>
+    <PackageReference Include="Xamarin.GooglePlayServices.MLKit.Text.Recognition">
+      <Version>119.0.1.4</Version>
+    </PackageReference>
+  </ItemGroup>
 
-  <ItemGroup>
-    <MauiAsset  Include="tessdata\eng.traineddata">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </MauiAsset>
-    <MauiAsset  Include="tessdata\deu.traineddata">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </MauiAsset>
- </ItemGroup>
+<ItemGroup Condition="$(TargetFramework.Contains('-android'))">
+  <ProjectReference Include="..\TesseractBindings\TesseractBindings.csproj" />
+</ItemGroup>
+
+<ItemGroup>
+  <Compile Update="PopUp\PopUp.xaml.cs">
+    <DependentUpon>PopUp.xaml</DependentUpon>
+  </Compile>
+</ItemGroup>
+
+<ItemGroup>
+  <MauiXaml Update="BudgetPage.xaml">
+    <Generator>MSBuild:Compile</Generator>
+  </MauiXaml>
+  <MauiXaml Update="PopUp\PopUp.xaml">
+    <Generator>MSBuild:Compile</Generator>
+  </MauiXaml>
+</ItemGroup>
+
+<ItemGroup>
+  <Folder Include="Services\" />
+</ItemGroup>
 
  </Project>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup
+    x:DataType="viewmodel:PopUpViewModel"
+    x:Class="ExpensesAppCpp.PopUp.CustomPopUp"
+    x:Name="PopUp"
+    xmlns:viewmodel="clr-namespace:ExpensesAppCpp.ViewModel"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    BackgroundColor="Black">
+
+    <VerticalStackLayout Padding="0" Spacing="0" VerticalOptions="Center">
+        <Label Text="{Binding CustomErrorMessage}" FontSize="15" HorizontalOptions="Center" Padding="20"/>
+        <Button Text="{Binding CloseButtonText}" Command="{Binding CloseCommand}" CommandParameter="{x:Reference Name=PopUp}" TextColor="White" HorizontalOptions="Center"/>
+    </VerticalStackLayout>
+</toolkit:Popup>

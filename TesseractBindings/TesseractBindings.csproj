@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!--
+      Enable trim analyzers for Android class libraries.
+      To learn more, see: https://learn.microsoft.com/dotnet/core/deploying/trimming/prepare-libraries-for-trimming
+    -->
+    <IsTrimmable>true</IsTrimmable>
+    <!--
+      NOTE: you can simply add .aar or .jar files in this directory to be included in the project.
+      To learn more, see: https://learn.microsoft.com/dotnet/maui/migration/android-binding-projects
+    -->
+  </PropertyGroup>
+  <ItemGroup>
+    <AndroidLibrary Remove="Jars\tesseract4android-openmp-release.aar" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Jars\tesseract4android-openmp-release.aar" />
+  </ItemGroup>
+<ItemGroup>
+  <LibraryProjectZip Include="Jars\tesseract4android-standard-release.aar" />
+</ItemGroup>
+</Project>

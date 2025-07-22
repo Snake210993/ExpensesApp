@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodel="clr-namespace:ExpensesAppCpp.ViewModel"
+             xmlns:model="clr-namespace:ExpensesAppCpp.Models"
+             x:DataType="viewmodel:BudgetPageViewModel"
+             x:Class="ExpensesAppCpp.BudgetPage">
+    
+    
+    <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, *"
+          ColumnDefinitions="*, *, *, *"
+          Padding="10"
+          RowSpacing="30"
+          ColumnSpacing="30">
+
+        <DatePicker Grid.Row ="2" Grid.Column="0" x:Name="StartDatePicker" HorizontalOptions="Center" VerticalOptions="Center" Date="{Binding Start}" />
+
+        <Label Grid.Row="2" Grid.Column="1" Text="Start Date" HorizontalOptions="Center" VerticalOptions="Center"/>
+
+        <DatePicker Grid.Row="2" Grid.Column="2" x:Name="EndDatePicker" HorizontalOptions="Center" VerticalOptions="Center" Date="{Binding End}"/>
+
+        <Label Grid.Row="2" Grid.Column="3" Text="End Date" HorizontalOptions="Center" VerticalOptions="Center"/>
+
+        <Button Grid.Row="3" Grid.ColumnSpan="4" Text="Add Period" Command="{Binding AddPeriodCommand}"/>
+
+        <Label Grid.Row="0" Grid.ColumnSpan="4"       Text="Budget Perioden"       FontSize="20"       HorizontalOptions="Center"/>
+
+        <CollectionView ItemsSource="{Binding BudgetPeriods}" Grid.Row="1" Grid.ColumnSpan="4" HorizontalOptions="Fill">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="model:BudgetingPeriod">
+                    <SwipeView>
+                        <SwipeView.RightItems>
+                            <SwipeItems Mode="Reveal">
+                                <SwipeItem Text="Delete" BackgroundColor="Red" Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=RemovePeriodCommand}"
+                                           CommandParameter="{Binding .}"/>
+                            </SwipeItems>
+                        </SwipeView.RightItems>
+                        <SwipeView.LeftItems>
+                            <SwipeItems Mode="Reveal">
+                                <SwipeItem Text="Add Receipt" BackgroundColor="Green" Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=AddReceiptCommand}"
+                                           CommandParameter="{Binding .}"/>
+                            </SwipeItems>
+                        </SwipeView.LeftItems>
+                        <Grid Padding="10">
+                            <Border Stroke="DarkGreen" StrokeThickness="4" Padding="5">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="20"></RoundRectangle>
+                                </Border.StrokeShape>
+                                <Grid ColumnDefinitions="Auto, *">
+                                    <Label Text="{Binding DisplayName}" FontSize="18" Grid.Column="0" VerticalOptions="Center"/>
+                                    <Label Text="{Binding TotalSpent}" FontSize="18" Grid.Column="1" VerticalOptions="Center" HorizontalOptions="End"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </SwipeView>
+
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

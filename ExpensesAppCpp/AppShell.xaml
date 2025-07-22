@@ -11,8 +11,8 @@
         ContentTemplate="{DataTemplate local:MainPage}"
         Route="MainPage" />
     <ShellContent
-        Title="Ausgaben"
-        ContentTemplate="{DataTemplate local:ExpenditureCollection}"
-        Route="ExpenditureCollection" />
+        Title="Budget"
+        ContentTemplate="{DataTemplate local:BudgetPage}"
+        Route="BudgetPage" />
 
 </Shell>

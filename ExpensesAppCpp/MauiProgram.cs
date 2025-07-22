@@ -1,5 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using TesseractOcrMaui;
+﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Storage;
+using ExpensesAppCpp.ViewModel;
+using ExpensesAppCpp.Models;
+using Microsoft.Extensions.Logging;
+using CommunityToolkit.Maui.Views;
 
 namespace ExpensesAppCpp
 {
@@ -10,22 +14,29 @@ namespace ExpensesAppCpp
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UseMauiCommunityToolkit()
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
+            builder.Services.AddSingleton<MainPage>();
+            builder.Services.AddSingleton<MainPageViewModel>();
+
+            builder.Services.AddSingleton<BudgetPage>();
+            builder.Services.AddSingleton<BudgetPageViewModel>();
+
+            builder.Services.AddSingleton<BudgetData>();
+
+            builder.Services.AddSingleton<PopUpViewModel>();
+            builder.Services.AddSingleton<Popup>();
 #if DEBUG
-    		builder.Logging.AddDebug();
+            builder.Logging.AddDebug();
 #endif
 
-            // Register Tesseract and load eng.traineddata
-            builder.Services.AddTesseractOcr(files =>
-            {
-                files.AddFile("eng.traineddata");
-                files.AddFile("deu.traineddata");
-            });
+
+
 
             return builder.Build();
         }

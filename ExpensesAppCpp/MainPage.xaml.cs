@@ -1,32 +1,46 @@
-﻿using TesseractOcrMaui;
-using TesseractOcrMaui.Results;
+﻿using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Storage;
+using Microsoft.Maui.Controls.PlatformConfiguration;
+using SkiaSharp;
+using System;
+using System.Diagnostics;
+using System.Text;
+using System.Threading;
+using System.Xml.Serialization;
+using ExpensesAppCpp.Helper;
+using ExpensesAppCpp.PreProcessor;
+using ExpensesAppCpp.Tesseract;
+using ExpensesAppCpp.ViewModel;
+using ExpensesAppCpp.Models;
 
+
+
+
+#if ANDROID
+using Com.Googlecode.Tesseract.Android;
+using Android.Graphics;
+#endif
 
 namespace ExpensesAppCpp
 {
     public partial class MainPage : ContentPage
     {
-        private readonly ITesseract _tesseract;
 
-        public MainPage(ITesseract tesseract)
+        public MainPage(MainPageViewModel vm)
         {
             InitializeComponent();
-            _tesseract = tesseract;
-
+            Overlay.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(() =>{}) });
+            BindingContext = vm;
         }
 
 
         private async void OnClicked(object? sender, EventArgs e)
         {
+            Stopwatch sw = Stopwatch.StartNew();
+            var result = "{}";
             try
             {
-                // Check and request camera permission
-                var status = await Permissions.RequestAsync<Permissions.Camera>();
-                if (status != PermissionStatus.Granted)
-                {
-                    await DisplayAlert("Permission Denied", "Camera permission is required.", "OK");
-                    return;
-                }
+
 
                 // Take photo using MediaPicker
                 if (MediaPicker.Default.IsCaptureSupported)
@@ -37,15 +51,23 @@ namespace ExpensesAppCpp
                         // You can use the photo file here (e.g., display or process it)
                         //preprocessing (grayscale, resize, etc.) can be done here if needed
 
-                        await _tesseract.LoadTraineddataAsync();
-                        var result = await _tesseract.RecognizeTextAsync(photo.FullPath);
-                        if (result.Confidence < 0.5)
+                        var preProcessedPicture = "{}";
+                        ActivityIndicator activityIndicator = new ActivityIndicator { IsRunning = true };
+                        Overlay.IsVisible = true;
+                        StatusLabel.Text = "Processing image...";
+
+                        preProcessedPicture = await Task.Run(() => PreProcessorHelper.PreProcessPicture(photo.FullPath, StatusLabel));
+                        if (preProcessedPicture == null)
                         {
-                            await DisplayAlert("OCR Failed", $"Reason: {result.Status}", "OK");
+                           await DisplayAlert("Error", "Failed to preprocess the image.", "OK");
+                           return;
+                        }
+                       result = await TesseractHelper.RunTesseractAsync(preProcessedPicture);
+                        if (string.IsNullOrEmpty(result))
+                        {
+                            await DisplayAlert("Error", "OCR failed to recognize any text.", "OK");
                             return;
                         }
-                        await DisplayAlert("OCR Result", result.RecognisedText, "OK");
-
                     }
                 }
                 else
@@ -57,52 +79,56 @@ namespace ExpensesAppCpp
             {
                 await DisplayAlert("Error", ex.Message, "OK");
             }
+            await DisplayAlert("Elapsed Time", $"Time spent: {sw.Elapsed}", "OK");
+            await DisplayAlert("Success", "Image processed successfully.", "OK");
+            await DisplayAlert("Recognized Text", result, "OK");
+            Spinner.IsRunning = false;
+            Overlay.IsVisible = false;
+            StatusLabel.Text = "Done!";
+
         }
         private async void OnUploadClicked(object? sender, EventArgs e)
         {
+            Stopwatch sw = Stopwatch.StartNew();
+            var result = "{}";
             // Navigate to the Expenses page
-            var path = await GetUserSelectedImagePath();
+            var path = await FileManipulationHelper.GetUserSelectedImagePath();
             if (path == null)
             {
                 await DisplayAlert("Error", "No image selected.", "OK");
                 return;
             }
-            await _tesseract.LoadTraineddataAsync();
-            var result = await _tesseract.RecognizeTextAsync(path);
-            if (result.Confidence < 0.5)
+            var preProcessedPicture = "{}";
+            ActivityIndicator activityIndicator = new ActivityIndicator { IsRunning = true };
+            Overlay.IsVisible = true;
+            StatusLabel.Text = "Processing image...";
+
+            preProcessedPicture = await Task.Run(() => PreProcessorHelper.PreProcessPicture(path, StatusLabel));
+
+           if (preProcessedPicture == null)
             {
-                await DisplayAlert("OCR Failed", $"Reason: {result.Status}", "OK");
+                await DisplayAlert("Error", "Failed to preprocess the image.", "OK");
                 return;
             }
-            await DisplayAlert("OCR Result", result.RecognisedText, "OK");
-        }
-
-
-        private static async Task<string?> GetUserSelectedImagePath()
-        {
-            /* This method lets user to select image file by opening
-               file selection dialog. */
-#if IOS
-        /* Note that this method uses conditional
-           compilation for iOS because MediaPicker is better
-           option to use for image picking on iOS. */
-        var pickResult = await MediaPicker.PickPhotoAsync(new MediaPickerOptions()
-        {
-            Title = "Pick jpeg or png image"
-        });
-#else
-            var pickResult = await FilePicker.PickAsync(new PickOptions()
+            result = await TesseractHelper.RunTesseractAsync(preProcessedPicture);
+            if (string.IsNullOrEmpty(result))
             {
-                PickerTitle = "Pick jpeg or png image",
-                // Currently usable image types are png and jpeg
-                FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>()
-                {
-                    [DevicePlatform.Android] = new List<string>() { "image/png", "image/jpeg" },
-                    [DevicePlatform.WinUI] = new List<string>() { ".png", ".jpg", ".jpeg" },
-                })
-            });
-#endif
-            return pickResult?.FullPath;
+                await DisplayAlert("Error", "OCR failed to recognize any text.", "OK");
+                return;
+            }
+            await DisplayAlert("Success", result, "OK");
+            Spinner.IsRunning = false;
+            Overlay.IsVisible = false;
+            StatusLabel.Text = "Done!";
+            await DisplayAlert("Elapsed Time", $"Time spent: {sw.Elapsed}", "OK");
+
         }
+
+
+
+
     }
+
+
+
 }

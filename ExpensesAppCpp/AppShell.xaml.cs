@@ -5,7 +5,6 @@
         public AppShell()
         {
             InitializeComponent();
-            Routing.RegisterRoute(nameof(ExpensesAppCpp.ExpenditureCollection), typeof(ExpensesAppCpp.ExpenditureCollection));
         }
     }
 }
