@@ -1,9 +1,12 @@
 ﻿using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Storage;
+using ExpensesAppCpp.ErrorHandling;
+using ExpensesAppCpp.Helper;
 using ExpensesAppCpp.Models;
 using ExpensesAppCpp.PopUp;
 using ExpensesAppCpp.ViewModel;
-using ExpensesAppCpp.Helper;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls.PlatformConfiguration;
 using SkiaSharp;
 using System;
@@ -11,8 +14,6 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Xml.Serialization;
-using CommunityToolkit.Maui.Extensions;
-using ExpensesAppCpp.ErrorHandling;
 
 
 
@@ -125,7 +126,7 @@ namespace ExpensesAppCpp.PreProcessor
             }
         }
 
-        private static double EstimateSkewAngle(SKBitmap binaryBitmap)
+        public static double EstimateSkewAngle(SKBitmap binaryBitmap)
         {
             int width = binaryBitmap.Width;
             int height = binaryBitmap.Height;
@@ -151,7 +152,7 @@ namespace ExpensesAppCpp.PreProcessor
             return bestAngle;
         }
 
-        private static SKBitmap RotateBitmap(SKBitmap src, double angleDegrees)
+        public static SKBitmap RotateBitmap(SKBitmap src, double angleDegrees)
         {
             double angleRadians = angleDegrees * Math.PI / 180.0;
 
@@ -190,7 +191,7 @@ namespace ExpensesAppCpp.PreProcessor
         }
 
 
-        private static SKBitmap ResizeBitmap(SKBitmap originalBitmap, int targetWidth)
+        public static SKBitmap ResizeBitmap(SKBitmap originalBitmap, int targetWidth)
         {
             // Maintain aspect ratio
             int targetHeight = (int)(targetWidth / (float)originalBitmap.Width * originalBitmap.Height);
@@ -207,41 +208,35 @@ namespace ExpensesAppCpp.PreProcessor
 
             return resized;
         }
-       
 
-            //preprocess picture - save temporary and return path to temporary picture
-        public static async Task<string?> PreProcessPicture(string path, Label statusLabel)
+        public static async Task<SKBitmap?> CreateBitmap(string path)
         {
-
-            return await Task.Run(async () =>
-            {
-                Stopwatch sw = Stopwatch.StartNew(); //measuring time 
-
-                MainThread.BeginInvokeOnMainThread(() => statusLabel.Text = "Opening Image...");
 
                 SKBitmap bitmap;
                 using (var stream = File.OpenRead(path))
                 {
-                    MainThread.BeginInvokeOnMainThread(() => statusLabel.Text = "Decoding Image...");
                     using var codec = SKCodec.Create(stream);
                     bitmap = SKBitmap.Decode(codec);
                     bitmap = PreProcessorHelper.ApplyExifOrientation(bitmap, codec.EncodedOrigin);
                 }
 
+                if (bitmap == null) return null;
+                return bitmap;
+        }
+
+        public static async Task<SKBitmap?> ApplyGrayScale(SKBitmap bitmap, bool treshold)
+        {
+            return await Task.Run(async () =>
+            {
                 if (bitmap == null)
                     return null;
-                MainThread.BeginInvokeOnMainThread(() => statusLabel.Text = "Peeking Pixels...");
-
                 var pixmap = bitmap.PeekPixels();
-
-                Trace.WriteLine($"Image size: {bitmap.Width}x{bitmap.Height}");
 
 
                 // Loop through bitmap
                 unsafe
                 {
                     // Assume format is BGRA8888 (default in Skia)
-                    MainThread.BeginInvokeOnMainThread(() => statusLabel.Text = "Applying grayscale to image...");
                     for (int y = 0; y < pixmap.Height; y++)
                     {
                         byte* row = (byte*)pixmap.GetPixels().ToPointer() + y * pixmap.RowBytes;
@@ -258,7 +253,7 @@ namespace ExpensesAppCpp.PreProcessor
 
                             pixel[0] = pixel[1] = pixel[2] = gray; //removed binary to gray
 
-                            if (false)
+                            if (treshold)
                             {
                                 int threshold = 128; // Threshold for binarization
                                 byte binary = (gray >= threshold) ? (byte)255 : (byte)0;
@@ -267,41 +262,19 @@ namespace ExpensesAppCpp.PreProcessor
                         }
                     }
                 }
-                MainThread.BeginInvokeOnMainThread(() => statusLabel.Text = "Deskewing image...");
-                //// Estimate skew angle
-                //double skewAngle = EstimateSkewAngle(bitmap);
-                //Trace.WriteLine($"Estimated skew angle: {skewAngle}°");
-
-                //// Rotate to deskew
-                //var deskewedBitmap = RotateBitmap(bitmap, -skewAngle); // negative to correct
-
-                MainThread.BeginInvokeOnMainThread(() => statusLabel.Text = "Resizing image...");
-
-                if (bitmap.Width > 1500 || bitmap.Height > 1500)
-                {
-                    // Resize bitmap to a maximum width or height of 1500px, maintaining aspect ratio
-                    bitmap = ResizeBitmap(bitmap, 1500);
-                }
-                else
-                {
-                    Trace.WriteLine("No resizing needed, image is already within limits.");
-                }
-
-                MainThread.BeginInvokeOnMainThread(() => statusLabel.Text = "Saving cleaned image...");
-                using (var image = SKImage.FromBitmap(bitmap))
-                using (var data = image.Encode(SKEncodedImageFormat.Png, 100)) // PNG strips EXIF by design
-                {
-                    using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
-                    data.SaveTo(fs);
-                }
-                await FileManipulationHelper.SaveBitmapAsync(bitmap);
-                MainThread.BeginInvokeOnMainThread(() => statusLabel.Text = "Reading receipt...");
-
-
-                Trace.WriteLine($"Time spent preprocessing: {sw.Elapsed}");
-                return path;
-
+            if (bitmap == null)
+                    return null;
+                return bitmap;
             });
+        }
+        public static async void StripExifData(SKBitmap bitmap, string path)
+        {
+            using (var image = SKImage.FromBitmap(bitmap))
+            using (var data = image.Encode(SKEncodedImageFormat.Png, 100)) // PNG strips EXIF by design
+            {
+                using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+                data.SaveTo(fs);
+            }
         }
 
     }

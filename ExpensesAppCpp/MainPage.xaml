@@ -54,7 +54,7 @@
         <Grid x:Name="Overlay"
       BackgroundColor="Black"
       Opacity="0.8"
-      IsVisible="False"
+      IsVisible="{Binding VisibleOverlay}"
       InputTransparent="False"
       HorizontalOptions="Fill"
       VerticalOptions="Fill">
@@ -71,7 +71,7 @@
                 <ActivityIndicator x:Name="Spinner"
                            Color="White"
                            IsRunning="True"
-                           IsVisible="True"
+                           IsVisible="{Binding IndicatorVisible}"
                            WidthRequest="80"
                            HeightRequest="80"
                            HorizontalOptions="Center"
