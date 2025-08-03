@@ -1,7 +1,8 @@
-﻿using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace ExpensesAppCpp.Models
         public DateTime endDate;
 
         [ObservableProperty]
-        public List<Receipt> receipts = new();
+        public ObservableCollection<Receipt> receipts = new();
 
         public string DisplayName => $"{StartDate:dd MMM} - {EndDate:dd MMM}";
 

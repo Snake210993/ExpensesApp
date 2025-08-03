@@ -13,19 +13,4 @@ public partial class BudgetPage : ContentPage
 		InitializeComponent();
         BindingContext = vm;
     }
-
-    private double _swipeOffset;
-
-    private void OnSwipeChanging(object sender, SwipeChangingEventArgs e)
-    {
-        _swipeOffset = e.Offset;
-    }
-
-    private void OnSwipeEnded(object sender, SwipeEndedEventArgs e)
-    {
-        if (Math.Abs(_swipeOffset) < 60)
-        {
-            (sender as SwipeView)?.Close(); // Close if swipe too short
-        }
-    }
 }

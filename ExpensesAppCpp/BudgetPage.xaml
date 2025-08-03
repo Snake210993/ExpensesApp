@@ -28,72 +28,67 @@
         <CollectionView ItemsSource="{Binding BudgetPeriods}" Grid.Row="1" Grid.ColumnSpan="4" HorizontalOptions="Fill">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="model:BudgetingPeriod">
-
                     <VerticalStackLayout>
-                        <SwipeView SwipeChanging="OnSwipeChanging" SwipeEnded="OnSwipeEnded">
-                            <SwipeView.RightItems>
-                                <SwipeItems Mode="Reveal">
-                                    <SwipeItem Text="Delete" BackgroundColor="Red" Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=RemovePeriodCommand}"
-                                           CommandParameter="{Binding .}"/>
-                                </SwipeItems>
-                            </SwipeView.RightItems>
-                            <SwipeView.LeftItems>
-                                <SwipeItems Mode="Reveal">
-                                    <SwipeItem Text="Add Receipt" BackgroundColor="Green" Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=AddReceiptCommand}"
-                                           CommandParameter="{Binding .}"/>
-                                </SwipeItems>
-                            </SwipeView.LeftItems>
+                        <!-- Clickable Budget Period Row -->
+                        <Border Stroke="DarkGreen" StrokeThickness="4" Padding="5" Margin="5">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="20" />
+                            </Border.StrokeShape>
 
+                            <Grid ColumnDefinitions="*,Auto,Auto" Padding="10">
+                                <!--tappable area start-->
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Grid.Column="0" 
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=ToggleExpandCommand}"
+                                CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
 
-                            <!-- Clickable Budget Period Row -->
-                            <Grid Padding="10">
-                                <Border Stroke="DarkGreen" StrokeThickness="4" Padding="5">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="20" />
-                                    </Border.StrokeShape>
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <Grid.GestureRecognizers>
-                                            <TapGestureRecognizer 
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=ToggleExpandCommand}"
-                                        CommandParameter="{Binding .}"/>
-                                        </Grid.GestureRecognizers>
-                                        <Label Text="{Binding DisplayName}" FontSize="18" VerticalOptions="Center"/>
-                                        <Label Text="{Binding TotalSpent}" FontSize="18" VerticalOptions="Center" HorizontalOptions="End"/>
-                                    </Grid>
-                                </Border>
+                                <Label Text="{Binding DisplayName}" FontSize="18" VerticalOptions="Center" />
+
+                                <Label Text="{Binding TotalSpent}" FontSize="18" VerticalOptions="Center" HorizontalOptions="End" Grid.Column="1" Margin="10,0" />
+
+                                <!--Tappable area end-->
+
+                                <HorizontalStackLayout Grid.Column="2" Spacing="5" InputTransparent="false">
+                                    <Button Text="➕" 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=AddReceiptCommand}" 
+                                    CommandParameter="{Binding .}" 
+                                    BackgroundColor="Transparent"/>
+
+                                    <Button Text="🗑" 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=RemovePeriodCommand}" 
+                                    CommandParameter="{Binding .}" 
+                                    BackgroundColor="Transparent" />
+                                </HorizontalStackLayout>
                             </Grid>
-                        </SwipeView>
+                        </Border>
 
-                        <!-- ✅ Dropdown Receipts List -->
-
+                        <!-- Dropdown Receipts List -->
                         <CollectionView ItemsSource="{Binding Receipts}"
                                 IsVisible="{Binding IsExpanded}"
                                 Margin="20,0,0,10">
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="model:Receipt">
-                                    <SwipeView>
-                                        <SwipeView.RightItems>
-                                            <SwipeItems Mode="Reveal">
-                                                <SwipeItem Text="Delete" BackgroundColor="Red" Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=DeleteReceiptCommand}"
-                                                           CommandParameter="{Binding .}"/>
-                                            </SwipeItems>
-                                        </SwipeView.RightItems>
-                                        <SwipeView.LeftItems>
-                                            <SwipeItems Mode="Reveal">
-                                                <SwipeItem Text="Edit" BackgroundColor="Blue" Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=EditReceiptCommand}"
-                                                           CommandParameter="{Binding .}"/>
-                                            </SwipeItems>
-                                        </SwipeView.LeftItems>
-                                        <Grid ColumnDefinitions="*,Auto" Padding="5">
-                                            <Label Text="{Binding StoreName}" FontSize="14"/>
-                                            <Label Text="{Binding Amount}" FontSize="14" HorizontalOptions="End"/>
-                                        </Grid>
-                                    </SwipeView>
+                                    <!-- You can keep or replace SwipeView here -->
+                                    <Grid ColumnDefinitions="*,Auto" Padding="5">
+                                        <Label Text="{Binding StoreName}" FontSize="14"/>
+                                        <Label Text="{Binding Amount}" FontSize="14" HorizontalOptions="End"/>
+
+                                        <HorizontalStackLayout Grid.Column="2" Spacing="5" VerticalOptions="Center">
+                                            <Button Text="✏️"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=EditReceiptCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="Transparent" />
+
+                                            <Button Text="🗑"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:BudgetPageViewModel}}, Path=DeleteReceiptCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="Transparent" />
+                                        </HorizontalStackLayout>
+                                    </Grid>
                                 </DataTemplate>
                             </CollectionView.ItemTemplate>
                         </CollectionView>
-
-
                     </VerticalStackLayout>
                 </DataTemplate>
             </CollectionView.ItemTemplate>

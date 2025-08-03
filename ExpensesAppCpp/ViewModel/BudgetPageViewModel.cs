@@ -64,7 +64,7 @@ namespace ExpensesAppCpp.ViewModel
                 return;
             }
 
-            var receipts = new List<Receipt>
+            var receipts = new ObservableCollection<Receipt>
             {
                 new Receipt { Date = Start, StoreName = "Test Store", Amount = 12.0m },
                 new Receipt { Date = Start, StoreName = "adb Store", Amount = 19.0m },
@@ -85,34 +85,22 @@ namespace ExpensesAppCpp.ViewModel
         [RelayCommand]
         async Task AddReceipt(BudgetingPeriod period)
         {
-            if (period == null)
-            {
-                Debug.WriteLine("Cannot add receipt to a null period.");
-                return;
-            }
+            if (period == null) return;
+
             var newReceipt = new Receipt
             {
                 Date = DateTime.Now,
                 StoreName = "New Store",
-                Amount = 10.0m // Default amount
+                Amount = 10.0m
             };
-            period.AddReceipt(newReceipt);
-            //recalculate total spent if needed
-            var updatedPeriod = new BudgetingPeriod
-            {
-                StartDate = period.StartDate,
-                EndDate = period.EndDate,
-                Receipts = period.Receipts,
-                TotalSpent = period.Receipts.Sum(r => r.Amount)
-            };
-            var index = BudgetPeriods.IndexOf(period);
-            if (index >= 0)
-            {
-                BudgetPeriods[index] = updatedPeriod;
-            }
-            Trace.WriteLine($"Receipt Added! Total Number of Receipts: {period.Receipts.Count}");
-            await _budgetData.SaveAsync();
 
+            period.AddReceipt(newReceipt);
+
+            period.TotalSpent = period.Receipts.Sum(r => r.Amount);
+
+            Trace.WriteLine($"Receipt Added! Total: {period.TotalSpent}");
+
+            await _budgetData.SaveAsync();
         }
         [RelayCommand]
         public async Task RemovePeriod(BudgetingPeriod period)
@@ -146,6 +134,7 @@ namespace ExpensesAppCpp.ViewModel
             if (period == null) return;
 
             period.RemoveReceipt(receipt); // This updates TotalSpent too
+            period.TotalSpent = period.Receipts.Sum(r => r.Amount);
 
             await _budgetData.SaveAsync();
         }
