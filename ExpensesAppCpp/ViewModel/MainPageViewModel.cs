@@ -37,9 +37,13 @@ namespace ExpensesAppCpp.ViewModel
 
         public bool USE_TRESHOLDING { get; set; } = false;
         public bool USE_SKEW_CORRECTION { get; set; } = false;
-        public bool USE_DEVELOPMENT_MODE { get; set; } = true;
+        public bool USE_DEVELOPMENT_MODE { get; set; } = false;
         public int SET_MAX_DIMENSIONS { get; set; } = 1500;
         public int SET_STATUS_DELAY { get; set; } = 2000; // milliseconds
+
+        public string[] POSSIBLE_STORES { get; set; } = { "Aldi", "Migros", "Lidl", "Coop", "Volg" }; //populate trough entries of the user in the future
+        public string[] POSSIBLE_AMOUNT_KEYWORDS = { "total", "summe", "gesamt", "amount due", "betrag", "amount", "due", "zu zahlen" };
+
 
         public MainPageViewModel(BudgetData budgetData)
         {
@@ -104,6 +108,11 @@ namespace ExpensesAppCpp.ViewModel
                 StatusLabel = "Done!";
                 //delay for user to see the status
                 await Task.Delay(SET_STATUS_DELAY);
+                string store = await TesseractHelper.ReturnStoreName(ocrResult, POSSIBLE_STORES);
+                await ErrorHandlingHelper.ShowPopup($"Store detected: {store}");
+                var amount = await TesseractHelper.ReturnAmount(ocrResult, POSSIBLE_AMOUNT_KEYWORDS);
+                Trace.WriteLine($"returned Amount: {amount}");
+                await ErrorHandlingHelper.ShowPopup($"Amount detected: {amount}");
                 IndicatorVisible = false;
                 VisibleOverlay = false;
 
@@ -131,48 +140,7 @@ namespace ExpensesAppCpp.ViewModel
                 await ErrorHandlingHelper.ShowPopup("No image captured. Please capture an image to scan.");
                 return;
             }
-            try
-            {
-                VisibleOverlay = true;
-                StatusLabel = "Processing image...";
-                IndicatorVisible = true;
-
-                bitmap = await PreProcessorHelper.CreateBitmap(path);
-                bitmap = await PreProcessorHelper.ApplyGrayScale(bitmap, USE_TRESHOLDING);
-                if (USE_SKEW_CORRECTION)
-                {
-                    double skewAngle = PreProcessorHelper.EstimateSkewAngle(bitmap);
-                    var deskewedBitmap = PreProcessorHelper.RotateBitmap(bitmap, -skewAngle);
-                }
-
-                if (bitmap.Width > SET_MAX_DIMENSIONS || bitmap.Height > SET_MAX_DIMENSIONS)
-                {
-                    // Resize bitmap to a maximum width or height of 1500px, maintaining aspect ratio
-                    bitmap = PreProcessorHelper.ResizeBitmap(bitmap, 1500);
-                }
-                PreProcessorHelper.StripExifData(bitmap, path);
-                if (USE_DEVELOPMENT_MODE)
-                {
-                    // Save the preprocessed image for debugging purposes
-                    await FileManipulationHelper.SaveBitmapAsync(bitmap);
-                }
-                //cleanup
-                bitmap.Dispose();
-                ocrResult = await TesseractHelper.RunTesseractAsync(path);
-                Trace.WriteLine($"Image OCR'd {ocrResult}");
-                StatusLabel = "Done!";
-                //delay for user to see the status
-                await Task.Delay(SET_STATUS_DELAY);
-                IndicatorVisible = false;
-                VisibleOverlay = false;
-
-
-            }
-            catch (Exception ex)//where to define this?
-            {
-                await ErrorHandlingHelper.ShowPopup($"Error processing image: {ex.Message}");
-                return;
-            }
+            await ErrorHandlingHelper.ShowPopup("Feature not implemented yet. Please use the upload feature instead.");
 
 
 

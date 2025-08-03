@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,13 +8,24 @@ using System.Threading.Tasks;
 
 namespace ExpensesAppCpp.Models
 {
-    public class BudgetingPeriod
+    public partial class BudgetingPeriod : ObservableObject
     {
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
-        public List<Receipt> Receipts { get; set; } = new();
+        [ObservableProperty]
+        public DateTime startDate;
+
+        [ObservableProperty]
+        public DateTime endDate;
+
+        [ObservableProperty]
+        public List<Receipt> receipts = new();
+
         public string DisplayName => $"{StartDate:dd MMM} - {EndDate:dd MMM}";
-        public decimal TotalSpent { get; set; }
+
+        [ObservableProperty]
+        public decimal totalSpent;
+
+        [ObservableProperty]
+        public bool isExpanded;
 
 
         public void AddReceipt(Receipt receipt)

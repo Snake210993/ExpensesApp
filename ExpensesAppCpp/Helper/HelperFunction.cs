@@ -6,14 +6,18 @@ using ExpensesAppCpp.Helper;
 using ExpensesAppCpp.Models;
 using ExpensesAppCpp.PopUp;
 using ExpensesAppCpp.ViewModel;
+using FuzzySharp;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls.PlatformConfiguration;
 using SkiaSharp;
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Xml.Serialization;
+
 
 
 
@@ -318,7 +322,91 @@ namespace ExpensesAppCpp.Tesseract
             return "Tesseract OCR only works on Android.";
 #endif
         }
+
+        public static async Task<string?> ReturnStoreName(string ocrResult, string[] possibleStores)
+        {
+            // Check if OCR result contains any of the possible store names
+            // implement checking for partial store names & deducting the complete store name
+            foreach (var store in possibleStores)
+            {
+                if (ocrResult.Contains(store, StringComparison.OrdinalIgnoreCase))
+                {
+                    return store;
+                }
+            }
+            // If no store name found, return null
+            //else use fuzzy
+            string? bestMatch = null;
+            int bestScore = 0;
+            foreach (var store in possibleStores)
+            {
+                int score = Fuzz.WeightedRatio(ocrResult, store);
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestMatch = store;
+                }
+
+                
+            }
+            return bestMatch;
+
+        }
+
+        public static async Task<decimal?> ReturnAmount(string ocrResult, string[] keywords)
+        {
+            // OCR result (simulated)
+            var lines = ocrResult.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            string? totalLine = null;
+            int bestScore = 0;
+
+            // Match formats like 26.85, 1,234.50, or 12,50 (German/Swiss)
+            var amountRegex = new Regex(@"(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))");
+
+
+            // Fuzzy match each line against total-related keywords
+            foreach (var line in lines)
+            {
+
+                if (!amountRegex.IsMatch(line)) continue;
+
+                foreach (var keyword in keywords)
+                {
+                    int score = Fuzz.PartialRatio(keyword.ToLower(), line.ToLower());
+                    if (score > bestScore && score > 70) // threshold ~70 for fuzzy matching
+                    {
+                        bestScore = score;
+                        totalLine = line;
+                    }
+                }
+            }
+            if (!string.IsNullOrEmpty(totalLine))
+            {
+
+                var match = amountRegex.Match(totalLine);
+                if (match.Success)
+                {
+                    // Normalize 12,50 -> 12.50 for invariant parsing
+                    var normalized = match.Value.Replace(',', '.');
+                    if (decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal result))
+                    {
+                        return result; // Return the parsed amount
+                    }
+                }
+            }
+
+
+            return null; // If no valid amount found
+        }
+
+        //public static async Task<DateTime> ReturnReceiptDate()
+        //{
+
+        //}
     }
+
+
 }
 namespace ExpensesAppCpp.FotoManagement
 {

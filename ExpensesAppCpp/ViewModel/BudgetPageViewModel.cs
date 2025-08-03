@@ -1,9 +1,11 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Maui.Converters;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ExpensesAppCpp.Models;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Xml.Serialization;
 
 
@@ -14,12 +16,14 @@ namespace ExpensesAppCpp.ViewModel
 
         private readonly BudgetData _budgetData;
 
+
         public BudgetPageViewModel(BudgetData budgetData)
         {
             Items = new ObservableCollection<string>();
             BudgetPeriods = new ObservableCollection<BudgetingPeriod>();
             Start = DateTime.Now;
             End = DateTime.Now.AddDays(30); // Default to 30 days from now
+
             _budgetData = budgetData;
             BudgetPeriods = _budgetData.BudgetPeriods;
         }
@@ -47,7 +51,7 @@ namespace ExpensesAppCpp.ViewModel
 
 
         [RelayCommand]
-        public void AddPeriod()
+        public async Task AddPeriod()
         {
             if (Start > End)
             {
@@ -75,9 +79,11 @@ namespace ExpensesAppCpp.ViewModel
                 TotalSpent = receipts.Sum(r => r.Amount)
             });
 
+            //save state
+            await _budgetData.SaveAsync();
         }
         [RelayCommand]
-        void AddReceipt(BudgetingPeriod period)
+        async Task AddReceipt(BudgetingPeriod period)
         {
             if (period == null)
             {
@@ -105,18 +111,45 @@ namespace ExpensesAppCpp.ViewModel
                 BudgetPeriods[index] = updatedPeriod;
             }
             Trace.WriteLine($"Receipt Added! Total Number of Receipts: {period.Receipts.Count}");
-
+            await _budgetData.SaveAsync();
 
         }
         [RelayCommand]
-        public void RemovePeriod(BudgetingPeriod period)
+        public async Task RemovePeriod(BudgetingPeriod period)
         {
             if (BudgetPeriods.Contains(period))
             {
                 BudgetPeriods.Remove(period);
+                await _budgetData.SaveAsync();
+            }
+
+        }
+
+        [RelayCommand]
+        public void ToggleExpand(BudgetingPeriod period)
+        {
+            if (period == null) return;
+            period.IsExpanded = !period.IsExpanded;
+
+            // Notify UI by refreshing the collection
+            var index = BudgetPeriods.IndexOf(period);
+            if (index >= 0)
+            {
+                BudgetPeriods[index] = period;
             }
         }
 
-        
+        [RelayCommand]
+        public async Task DeleteReceipt(Receipt receipt)
+        {
+            var period = BudgetPeriods.FirstOrDefault(p => p.Receipts.Contains(receipt));
+            if (period == null) return;
+
+            period.RemoveReceipt(receipt); // This updates TotalSpent too
+
+            await _budgetData.SaveAsync();
+        }
+
+
     }
 }
