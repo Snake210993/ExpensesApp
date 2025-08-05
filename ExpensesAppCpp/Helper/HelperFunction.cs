@@ -83,6 +83,7 @@ namespace ExpensesAppCpp.Helper
 }
 namespace ExpensesAppCpp.PreProcessor
 {
+
     public class PreProcessorHelper
     {
 
@@ -129,88 +130,102 @@ namespace ExpensesAppCpp.PreProcessor
                     return source; // Other mirrored cases not needed for OCR
             }
         }
+        
 
-        public static double EstimateSkewAngle(SKBitmap binaryBitmap)
+
+        private static Task<double> ComputeHorizontalProjectionScoreAsync(SKBitmap bmp)
         {
-            int width = binaryBitmap.Width;
-            int height = binaryBitmap.Height;
-            int angleSteps = 30; // test angles from -15 to +15 degrees
-            double angleStepSize = 1.0; // degree
-
-            double bestScore = double.MinValue;
-            double bestAngle = 0;
-
-            for (int i = -angleSteps; i <= angleSteps; i++)
-            {
-                double angle = i * angleStepSize;
-                using var rotated = RotateBitmap(binaryBitmap, angle);
-
-                double score = ComputeHorizontalProjectionScore(rotated);
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    bestAngle = angle;
-                }
-            }
-
-            return bestAngle;
+            return Task.Run(() => ComputeHorizontalProjectionScore(bmp));
+        }
+        public static Task<SKBitmap> RotateBitmapAsync(SKBitmap src, double angleDegrees)
+        {
+            return Task.Run(() => RotateBitmap(src, angleDegrees));
         }
 
         public static SKBitmap RotateBitmap(SKBitmap src, double angleDegrees)
         {
-            double angleRadians = angleDegrees * Math.PI / 180.0;
-
             using var surface = SKSurface.Create(new SKImageInfo(src.Width, src.Height));
             var canvas = surface.Canvas;
-
             canvas.Clear(SKColors.White);
             canvas.Translate(src.Width / 2, src.Height / 2);
             canvas.RotateDegrees((float)angleDegrees);
             canvas.Translate(-src.Width / 2, -src.Height / 2);
             canvas.DrawBitmap(src, 0, 0);
             canvas.Flush();
-
             using var img = surface.Snapshot();
             return SKBitmap.FromImage(img);
         }
 
         private static double ComputeHorizontalProjectionScore(SKBitmap bmp)
         {
-            int width = bmp.Width;
-            int height = bmp.Height;
+            // SKBitmap.Pixels gives you an SKColor[] you can index directly:
+            var colors = bmp.Pixels;
+            int W = bmp.Width, H = bmp.Height;
             double score = 0;
 
-            for (int y = 0; y < height; y++)
+            for (int y = 0; y < H; y++)
             {
                 int rowSum = 0;
-                for (int x = 0; x < width; x++)
+                int off = y * W;
+                for (int x = 0; x < W; x++)
                 {
-                    var pixel = bmp.GetPixel(x, y);
-                    rowSum += pixel.Red == 0 ? 1 : 0; // black pixels only
+                    if (colors[off + x].Red == 0)
+                        rowSum++;
                 }
-                score += rowSum * rowSum;
+                score += (long)rowSum * rowSum;
             }
 
             return score;
         }
 
-
-        public static SKBitmap ResizeBitmap(SKBitmap originalBitmap, int targetWidth)
+        public static Task<double> EstimateSkewAngleAsync(SKBitmap binaryBitmap)
         {
-            // Maintain aspect ratio
-            int targetHeight = (int)(targetWidth / (float)originalBitmap.Width * originalBitmap.Height);
-
-            // Create a new resized bitmap
-            SKImageInfo info = new SKImageInfo(targetWidth, targetHeight);
-            SKBitmap resized = new SKBitmap(info);
-
-            using (var canvas = new SKCanvas(resized))
+            return Task.Run(() =>
             {
-                canvas.Clear(SKColors.White); // Optional: clear background
-                canvas.DrawBitmap(originalBitmap, new SKRect(0, 0, targetWidth, targetHeight));
-            }
+                int angleSteps = 30;    // test –30…+30 steps => –30°…+30°
+                double angleStepSize = 1.0;  // degrees
 
-            return resized;
+                double bestScore = double.MinValue;
+                double bestAngle = 0;
+
+                for (int i = -angleSteps; i <= angleSteps; i++)
+                {
+                    double angle = i * angleStepSize;
+                    using var rotated = RotateBitmap(binaryBitmap, angle);
+                    double score = ComputeHorizontalProjectionScore(rotated);
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        bestAngle = angle;
+                    }
+                }
+
+                return bestAngle;
+            });
+        }
+
+        // replace your current EstimateSkewAngleFast with this:
+        public static async Task<double> EstimateSkewAngleFast(SKBitmap binaryBitmap, int proxyWidth = 600)
+        {
+            // 1) make a small proxy
+            using var proxy = ResizeBitmap(binaryBitmap, proxyWidth);
+
+            // 2) await the async skew estimator on the proxy
+            return await EstimateSkewAngleAsync(proxy);
+        }
+
+
+        public static SKBitmap ResizeBitmap(SKBitmap src, int targetWidth)
+        {
+            // preserve aspect ratio
+            int targetHeight = (int)(targetWidth / (float)src.Width * src.Height);
+
+            var info = new SKImageInfo(targetWidth, targetHeight, src.ColorType, src.AlphaType);
+
+            // cubic resampler (Mitchell) is exposed as a property, not a method
+            var sampling = new SKSamplingOptions(SKCubicResampler.Mitchell);
+
+            return src.Resize(info, sampling);
         }
 
         public static async Task<SKBitmap?> CreateBitmap(string path)
@@ -353,57 +368,98 @@ namespace ExpensesAppCpp.Tesseract
 
         }
 
-        public static async Task<decimal?> ReturnAmount(string ocrResult, string[] keywords)
+        public static async Task<decimal?> ReturnAmount(string ocrResult, string[] keywords, string[] blackList)
         {
-            // OCR result (simulated)
             var lines = ocrResult.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var amountRegex = new Regex(@"(CHF|Fr\.?)\s?(\d+[.,]\d{2})", RegexOptions.IgnoreCase);
 
-            string? totalLine = null;
+            decimal? bestAmount = null;
             int bestScore = 0;
 
-            // Match formats like 26.85, 1,234.50, or 12,50 (German/Swiss)
-            var amountRegex = new Regex(@"(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))");
-
-
-            // Fuzzy match each line against total-related keywords
-            foreach (var line in lines)
+            for (int i = 0; i < lines.Length; i++)
             {
+                var line = lines[i];
 
-                if (!amountRegex.IsMatch(line)) continue;
+                // Skip if blacklisted
+                if (blackList.Any(black => line.Contains(black, StringComparison.OrdinalIgnoreCase)))
+                    continue;
 
+                var match = amountRegex.Match(line);
+                if (!match.Success) continue;
+
+                var numericPart = match.Groups[2].Value.Replace(',', '.');
+                if (!decimal.TryParse(numericPart, NumberStyles.Any, CultureInfo.InvariantCulture, out var value))
+                    continue;
+
+                // Check this line + neighbors for total keywords
+                string context = line;
+                if (i > 0) context += " " + lines[i - 1];
+                if (i < lines.Length - 1) context += " " + lines[i + 1];
+
+                int score = 0;
                 foreach (var keyword in keywords)
                 {
-                    int score = Fuzz.PartialRatio(keyword.ToLower(), line.ToLower());
-                    if (score > bestScore && score > 70) // threshold ~70 for fuzzy matching
-                    {
-                        bestScore = score;
-                        totalLine = line;
-                    }
+                    score = Math.Max(score, Fuzz.PartialRatio(keyword.ToLower(), context.ToLower()));
                 }
-            }
-            if (!string.IsNullOrEmpty(totalLine))
-            {
 
-                var match = amountRegex.Match(totalLine);
-                if (match.Success)
+                if (score > bestScore)
                 {
-                    // Normalize 12,50 -> 12.50 for invariant parsing
-                    var normalized = match.Value.Replace(',', '.');
-                    if (decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal result))
-                    {
-                        return result; // Return the parsed amount
-                    }
+                    bestScore = score;
+                    bestAmount = value;
                 }
             }
 
-
-            return null; // If no valid amount found
+            return bestAmount;
         }
 
-        //public static async Task<DateTime> ReturnReceiptDate()
-        //{
 
-        //}
+        public static async Task<DateTime> ReturnDate(string ocrResult)
+        {
+            // 1) Match exactly dd.MM.yy OR dd.MM.yyyy
+            var dateRegex = new Regex(@"\b(\d{2}\.\d{2}\.\d{2,4})\b");
+            var match = dateRegex.Match(ocrResult);
+            if (!match.Success)
+                return DateTime.MinValue;
+
+            var dateString = match.Value;
+            // 2) Split day, month, year parts
+            var parts = dateString.Split('.');
+            if (parts.Length != 3)
+                return DateTime.MinValue;
+
+            if (parts[2].Length == 2)
+            {
+                // Two-digit year → force 2000+
+                if (int.TryParse(parts[0], out int day)
+                 && int.TryParse(parts[1], out int month)
+                 && int.TryParse(parts[2], out int yy))
+                {
+                    int year = 2000 + yy;
+                    // Validate range (optional)
+                    if (month >= 1 && month <= 12
+                     && day >= 1 && day <= DateTime.DaysInMonth(year, month))
+                    {
+                        return new DateTime(year, month, day);
+                    }
+                }
+            }
+            else if (parts[2].Length == 4)
+            {
+                // Four-digit year → parse with exact format & German culture
+                if (DateTime.TryParseExact(
+                        dateString,
+                        "dd.MM.yyyy",
+                        CultureInfo.GetCultureInfo("de-CH"),
+                        DateTimeStyles.None,
+                        out DateTime fullYear))
+                {
+                    return fullYear;
+                }
+            }
+
+            return DateTime.MinValue;
+        }
+
     }
 
 
@@ -467,7 +523,22 @@ namespace ExpensesAppCpp.ErrorHandling
                 var result = await currentPage.ShowPopupAsync(new CustomPopUp(new PopUpViewModel(message)));
             }
         }
+
+        public static async Task<bool> ShowConfirmationPopup(string message)
+        {
+            var currentPage = Application.Current.Windows[0].Page;
+            if (currentPage != null)
+            {
+                var viewModel = new PopUpViewModel(message, true);
+                var result = await currentPage.ShowPopupAsync(new CustomPopUp(viewModel));
+                return await viewModel.GetResultTask(); // Return the result of the confirmation
+            }
+            return false; // Default to false if no page is available
+        }
     }
 }
+
+
+
 
 

@@ -7,10 +7,15 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-    BackgroundColor="Black">
+    BackgroundColor="Black"
+    CanBeDismissedByTappingOutsideOfPopup="false">
 
-    <VerticalStackLayout Padding="0" Spacing="0" VerticalOptions="Center">
+    <VerticalStackLayout Padding="0" Spacing="0" VerticalOptions="Center" HorizontalOptions="Center">
         <Label Text="{Binding CustomErrorMessage}" FontSize="15" HorizontalOptions="Center" Padding="20"/>
-        <Button Text="{Binding CloseButtonText}" Command="{Binding CloseCommand}" CommandParameter="{x:Reference Name=PopUp}" TextColor="White" HorizontalOptions="Center"/>
+        <HorizontalStackLayout Padding="10" Spacing="20">
+            <Button Text="{Binding CloseButtonText}" Command="{Binding CloseCommand}" CommandParameter="{x:Reference Name=PopUp}" TextColor="White" HorizontalOptions="Center"/>
+            <Button Text="Continue" IsVisible="{Binding ContinueButtonVisible}" Command="{Binding ContinueCommand}" CommandParameter="{x:Reference Name=PopUp}" TextColor="White" HorizontalOptions="Center"/>
+        </HorizontalStackLayout>
+
     </VerticalStackLayout>
 </toolkit:Popup>

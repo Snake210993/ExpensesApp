@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -33,21 +34,25 @@ namespace ExpensesAppCpp.ViewModel
     public partial class MainPageViewModel : ObservableObject
     {
         private readonly BudgetData _budgetData;
+        private readonly BudgetPageViewModel _budgetVM;
 
 
-        public bool USE_TRESHOLDING { get; set; } = false;
-        public bool USE_SKEW_CORRECTION { get; set; } = false;
+        public bool USE_TRESHOLDING { get; set; } = true;
+        public bool USE_SKEW_CORRECTION { get; set; } = true;
         public bool USE_DEVELOPMENT_MODE { get; set; } = false;
         public int SET_MAX_DIMENSIONS { get; set; } = 1500;
         public int SET_STATUS_DELAY { get; set; } = 2000; // milliseconds
 
-        public string[] POSSIBLE_STORES { get; set; } = { "Aldi", "Migros", "Lidl", "Coop", "Volg" }; //populate trough entries of the user in the future
-        public string[] POSSIBLE_AMOUNT_KEYWORDS = { "total", "summe", "gesamt", "amount due", "betrag", "amount", "due", "zu zahlen" };
+        private static readonly string[] POSSIBLE_STORES = { "Aldi", "Migros", "Lidl", "Coop", "Volg" }; //populate trough entries of the user in the future
+        private static readonly string[] POSSIBLE_AMOUNT_KEYWORDS = { "total", "summe", "gesamt", "amount due", "betrag", "amount", "due", "zu zahlen", "preis" };
+        private static readonly string[] BLACKLISTED_KEYWORDS = { "mwst", "netto", "rundung", "steuer", "tax", "change", "rabatt" };
 
 
-        public MainPageViewModel(BudgetData budgetData)
+
+        public MainPageViewModel(BudgetData budgetData, BudgetPageViewModel budgetPageVM)
         {
             _budgetData = budgetData;
+            _budgetVM = budgetPageVM;
             VisibleOverlay = false;
             IndicatorVisible = false;
 
@@ -82,18 +87,21 @@ namespace ExpensesAppCpp.ViewModel
                 IndicatorVisible = true;
 
                 bitmap = await PreProcessorHelper.CreateBitmap(path);
-                bitmap = await PreProcessorHelper.ApplyGrayScale(bitmap, USE_TRESHOLDING);
                 if (USE_SKEW_CORRECTION)
                 {
-                    double skewAngle = PreProcessorHelper.EstimateSkewAngle(bitmap);
-                    var deskewedBitmap = PreProcessorHelper.RotateBitmap(bitmap, -skewAngle);
+                    StatusLabel = "Deskewing image...";
+                    double skew = await PreProcessorHelper.EstimateSkewAngleFast(bitmap);
+                    var deskewedBitmap = await PreProcessorHelper.RotateBitmapAsync(bitmap, -skew);
+
+                    bitmap = deskewedBitmap;
                 }
 
-                if (bitmap.Width > SET_MAX_DIMENSIONS || bitmap.Height > SET_MAX_DIMENSIONS)
-                {
-                    // Resize bitmap to a maximum width or height of 1500px, maintaining aspect ratio
-                    bitmap = PreProcessorHelper.ResizeBitmap(bitmap, 1500);
-                }
+                StatusLabel = "resizing image...";
+                bitmap = PreProcessorHelper.ResizeBitmap(bitmap, 1500);
+                StatusLabel = "binarizing image...";
+                bitmap = await PreProcessorHelper.ApplyGrayScale(bitmap, USE_TRESHOLDING);
+
+
                 PreProcessorHelper.StripExifData(bitmap, path);
                 if (USE_DEVELOPMENT_MODE)
                 {
@@ -105,16 +113,41 @@ namespace ExpensesAppCpp.ViewModel
                 ocrResult = await TesseractHelper.RunTesseractAsync(path);
                 // TODO: Display OCR result or pass it on as needed
                 Trace.WriteLine($"Image OCR'd {ocrResult}");
-                StatusLabel = "Done!";
+                StatusLabel = "Reading Receipt!!";
                 //delay for user to see the status
                 await Task.Delay(SET_STATUS_DELAY);
                 string store = await TesseractHelper.ReturnStoreName(ocrResult, POSSIBLE_STORES);
                 await ErrorHandlingHelper.ShowPopup($"Store detected: {store}");
-                var amount = await TesseractHelper.ReturnAmount(ocrResult, POSSIBLE_AMOUNT_KEYWORDS);
+                var amount = await TesseractHelper.ReturnAmount(ocrResult, POSSIBLE_AMOUNT_KEYWORDS, BLACKLISTED_KEYWORDS);
                 Trace.WriteLine($"returned Amount: {amount}");
                 await ErrorHandlingHelper.ShowPopup($"Amount detected: {amount}");
+                DateTime date = await TesseractHelper.ReturnDate(ocrResult);
+                string dateString = date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+                await ErrorHandlingHelper.ShowPopup($"Date detected: {dateString}");
                 IndicatorVisible = false;
                 VisibleOverlay = false;
+
+                //check if a period exists where the receipt fits in
+
+
+                var period = _budgetData.BudgetPeriods.LastOrDefault();
+                if (period == null)
+                {
+                    await ErrorHandlingHelper.ShowPopup("No budget period to add to.");
+                    return;
+                }
+
+                if (store == null) store = "no store";
+
+                period.AddReceipt(new Receipt
+                {
+                    Date = date,
+                    StoreName = store,
+                    Amount = (decimal)amount
+                });
+                period.TotalSpent = period.Receipts.Sum(r => r.Amount);
+
+                await _budgetData.SaveAsync();
 
 
             }
@@ -140,9 +173,80 @@ namespace ExpensesAppCpp.ViewModel
                 await ErrorHandlingHelper.ShowPopup("No image captured. Please capture an image to scan.");
                 return;
             }
-            await ErrorHandlingHelper.ShowPopup("Feature not implemented yet. Please use the upload feature instead.");
+            try
+            {
+                VisibleOverlay = true;
+                StatusLabel = "Processing image...";
+                IndicatorVisible = true;
+
+                bitmap = await PreProcessorHelper.CreateBitmap(path);
+                if (USE_SKEW_CORRECTION)
+                {
+                    StatusLabel = "Deskewing image...";
+                    double skew = await PreProcessorHelper.EstimateSkewAngleFast(bitmap);
+                    var deskewedBitmap = await PreProcessorHelper.RotateBitmapAsync(bitmap, -skew);
+
+                    bitmap = deskewedBitmap;
+                }
+
+                StatusLabel = "resizing image...";
+                bitmap = PreProcessorHelper.ResizeBitmap(bitmap, 1500);
+                StatusLabel = "binarizing image...";
+                bitmap = await PreProcessorHelper.ApplyGrayScale(bitmap, USE_TRESHOLDING);
 
 
+                PreProcessorHelper.StripExifData(bitmap, path);
+                if (USE_DEVELOPMENT_MODE)
+                {
+                    // Save the preprocessed image for debugging purposes
+                    await FileManipulationHelper.SaveBitmapAsync(bitmap);
+                }
+                //cleanup
+                bitmap.Dispose();
+                ocrResult = await TesseractHelper.RunTesseractAsync(path);
+                // TODO: Display OCR result or pass it on as needed
+                Trace.WriteLine($"Image OCR'd {ocrResult}");
+                StatusLabel = "Reading Receipt!!";
+                //delay for user to see the status
+                await Task.Delay(SET_STATUS_DELAY);
+                string store = await TesseractHelper.ReturnStoreName(ocrResult, POSSIBLE_STORES);
+                await ErrorHandlingHelper.ShowPopup($"Store detected: {store}");
+                var amount = await TesseractHelper.ReturnAmount(ocrResult, POSSIBLE_AMOUNT_KEYWORDS, BLACKLISTED_KEYWORDS);
+                Trace.WriteLine($"returned Amount: {amount}");
+                await ErrorHandlingHelper.ShowPopup($"Amount detected: {amount}");
+                DateTime date = await TesseractHelper.ReturnDate(ocrResult);
+                string dateString = date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+                await ErrorHandlingHelper.ShowPopup($"Date detected: {dateString}");
+                IndicatorVisible = false;
+                VisibleOverlay = false;
+
+                //check if a period exists where the receipt fits in
+
+
+                var period = _budgetData.BudgetPeriods.LastOrDefault();
+                if (period == null)
+                {
+                    await ErrorHandlingHelper.ShowPopup("No budget period to add to.");
+                    return;
+                }
+
+                period.AddReceipt(new Receipt
+                {
+                    Date = date,
+                    StoreName = store,
+                    Amount = (decimal)amount
+                });
+                period.TotalSpent = period.Receipts.Sum(r => r.Amount);
+
+                await _budgetData.SaveAsync();
+
+
+            }
+            catch (Exception ex)//where to define this?
+            {
+                await ErrorHandlingHelper.ShowPopup($"Error processing image: {ex.Message}");
+                return;
+            }
 
         }
 

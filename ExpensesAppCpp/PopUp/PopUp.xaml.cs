@@ -13,5 +13,6 @@ public partial class CustomPopUp : Popup
 	{
 		InitializeComponent();
 		BindingContext = vm;
+
     }
 }

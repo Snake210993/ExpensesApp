@@ -2,6 +2,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ExpensesAppCpp.Models;
+using ExpensesAppCpp.Helper;
+using ExpensesAppCpp.ErrorHandling;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -55,20 +57,18 @@ namespace ExpensesAppCpp.ViewModel
         {
             if (Start > End)
             {
-                Debug.WriteLine("Start date cannot be after end date.");
+                await ErrorHandlingHelper.ShowPopup("Start date cannot be after end date.");
                 return;
             }
             if (Start == End)
             {
-                Debug.WriteLine("Start date cannot be the same as end date.");
+                await ErrorHandlingHelper.ShowPopup("Start date cannot be the same as end date.");
                 return;
             }
 
             var receipts = new ObservableCollection<Receipt>
             {
-                new Receipt { Date = Start, StoreName = "Test Store", Amount = 12.0m },
-                new Receipt { Date = Start, StoreName = "adb Store", Amount = 19.0m },
-                new Receipt { Date = Start, StoreName = "123 Store", Amount = 5.0m }
+
             };
 
             BudgetPeriods.Add(new BudgetingPeriod
@@ -87,14 +87,8 @@ namespace ExpensesAppCpp.ViewModel
         {
             if (period == null) return;
 
-            var newReceipt = new Receipt
-            {
-                Date = DateTime.Now,
-                StoreName = "New Store",
-                Amount = 10.0m
-            };
+            //either open camera/laod from gallery or manually add receipt
 
-            period.AddReceipt(newReceipt);
 
             period.TotalSpent = period.Receipts.Sum(r => r.Amount);
 
@@ -107,10 +101,14 @@ namespace ExpensesAppCpp.ViewModel
         {
             if (BudgetPeriods.Contains(period))
             {
+                if (!await ErrorHandlingHelper.ShowConfirmationPopup("Are you sure you want to delete this period?"))
+                {
+                    return; // User cancelled the deletion
+                }
                 BudgetPeriods.Remove(period);
                 await _budgetData.SaveAsync();
             }
-
+            
         }
 
         [RelayCommand]
@@ -133,10 +131,22 @@ namespace ExpensesAppCpp.ViewModel
             var period = BudgetPeriods.FirstOrDefault(p => p.Receipts.Contains(receipt));
             if (period == null) return;
 
+
+            if ( !await ErrorHandlingHelper.ShowConfirmationPopup("Are you sure you want to delete this receipt?"))
+            {
+                return; // User cancelled the deletion
+            }
+
             period.RemoveReceipt(receipt); // This updates TotalSpent too
             period.TotalSpent = period.Receipts.Sum(r => r.Amount);
 
             await _budgetData.SaveAsync();
+        }
+
+        [RelayCommand]
+        public async Task EditReceipt()
+        {
+            await ErrorHandlingHelper.ShowPopup("Edit Receipt functionality is not implemented yet.");
         }
 
 
